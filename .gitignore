@@ -19,6 +19,7 @@ validator/bin/
 # JAR files (except gradle wrapper)
 *.jar
 !**/gradle/wrapper/gradle-wrapper.jar
+!legado-book-source-generator/validator/app/legado-source-validator.jar
 
 # Release packages
 release/*.zip
