@@ -60,12 +60,15 @@ function determineStatus(result) {
     }
   }
   
-  // 检查 Cloudflare/验证码
+  // 检查 Cloudflare/验证码（检查 error + raw response bodyPreview）
   for (const step of steps) {
     const err = step.error || '';
-    const body = step.response?.bodyPreview || '';
-    if (/Cloudflare|Turnstile|challenge|验证码|登录|WebView/i.test(err + body)) {
-      return { status: 'needs_app_review', reason: err };
+    // raw.steps 包含完整 bodyPreview
+    const rawStep = (result.steps || []).find(s => s.phase === step.phase);
+    const rawBody = rawStep?.response?.bodyPreview || '';
+    if (/Cloudflare|Turnstile|challenge|验证码|登录|WebView/i.test(err + rawBody)) {
+      const match = (err + rawBody).match(/Cloudflare|Turnstile|challenge|验证码|登录|WebView/i);
+      return { status: 'needs_app_review', reason: match ? match[0] + ' 检测' : err };
     }
   }
   
@@ -98,14 +101,15 @@ async function main() {
   const args = process.argv.slice(2);
   
   if (args.length < 2) {
-    console.error('用法: node validate-with-validator.mjs <source-json-file> <keyword> [mode] [--output <dir>]');
+    console.error('用法: node validate-with-validator.mjs <source-json-file> <keyword> [http|browser|auto] [--output <dir>]');
     process.exit(1);
   }
   
   const sourceFile = args[0];
   const keyword = args[1];
-  const mode = args[2] || 'http';
   const outputIdx = args.indexOf('--output');
+  const modeIdx = args.findIndex(a => ['http', 'browser', 'auto'].includes(a));
+  const mode = modeIdx >= 0 ? args[modeIdx] : 'http';
   const outputDir = outputIdx >= 0 ? args[outputIdx + 1] : null;
   
   // 检查 validator
@@ -147,6 +151,15 @@ async function main() {
   // 判定状态
   const { status, reason, phase, ruleHits } = determineStatus(result);
   const summary = extractSummary(result);
+  
+  // Debug: log detection info
+  if (process.env.DEBUG) {
+    const rawSteps = result.steps || [];
+    for (const s of rawSteps) {
+      console.error(`[DEBUG] step ${s.phase}: bodyPreview length=${s.response?.bodyPreview?.length}, has turnstile=${s.response?.bodyPreview?.includes('turnstile')}`);
+    }
+    console.error(`[DEBUG] status=${status}, reason=${reason}`);
+  }
   
   // 构建报告
   const report = {
