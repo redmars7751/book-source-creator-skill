@@ -232,6 +232,16 @@ npm test
 
 ## 限制与风险
 
+### v0.1.0 已知限制
+
+- validator 后端尚未支持 Android WebView / webJs，只能用 HTTP 或桌面浏览器渲染近似验证；桌面浏览器通过不等于阅读 App 通过。
+- 登录态 / CookieJar 尚未支持导入、记录、隔离和复用；遇到需要登录的链路只能标记需用户协助或 App 复核。
+- Cloudflare、验证码、付费墙、会员权限、DRM、强风控等访问控制不会也不应被绕过，只能标记 `needs_app_review`。
+- `validator passed` 只代表当前 search/detail/toc/content 技术链路跑通，不代表书源质量、长期可用性、合法可用性或阅读体验完整。
+- 多章节 URL 为空、不可区分、全部指向同一全文页、伪章节等情况应标记 `degraded`，不能当作完整通过。
+
+### 一般限制与风险
+
 技术上：
 
 - 站点结构、接口、参数、登录机制可能随时变化
