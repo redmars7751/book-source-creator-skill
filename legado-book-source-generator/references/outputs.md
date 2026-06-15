@@ -35,6 +35,7 @@ runs/<site-slug>/
 
 - 顶层使用 JSON 数组
 - 单个书源也要用数组包裹：`[ { ... } ]`
+- **禁止空字符串可选字段** — 可选字段要么填有效值，要么删除，不得保留 `""`
 - 交付前必须完成以下验证：
   1. `npm run validate` — JSON 结构校验
   2. `node scripts/validate-with-validator.mjs` — 真实链路验证（search→detail→toc→content）

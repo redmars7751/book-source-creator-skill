@@ -79,6 +79,8 @@ validator 失败且证据不足 → 用 Browser MCP 补实测
 15. **validator-report.json 必须落盘** — 每次 validator 验证必须保存完整 `validator-report.json`（含 phases/error/ruleHits/bodyPreview），不能只写 summary。
 16. **Browser MCP ≠ Android WebView** — Browser MCP 是桌面浏览器，不等价于 Android Legado WebView。不得写"Legado App WebView 可渲染"，只能写"浏览器渲染后有正文"。
 17. **CSR/WebView 边界先跑 auto** — 遇到正文 CSR/WebView 边界时，先跑 `mode=auto` 或 `mode=browser`，失败后再标 `validator_limitation`。
+18. **交付前文件完整性检查** — 最终交付前必须确认 `runs/<site-slug>/` 下 5 个文件齐全：`assessment.md`、`analysis.md`、`validation-checklist.md`、`validator-report.json`、`validator-summary.md`。缺一不可。
+19. **禁止空字符串可选字段** — `book-source.json` 中可选字段要么填有效值，要么删除，不得保留空字符串 `""`。
 
 ## 输出结构
 
@@ -109,7 +111,7 @@ validator 失败且证据不足 → 用 Browser MCP 补实测
 
 ### 启动规则
 
-- **每次验证前先探测** `http://localhost:1111`，已有服务则复用，不重复启动。
+- **每次验证前先探测** `http://localhost:1111/api/sources`（禁止用 `/health`，该端点不存在），已有服务则复用，不重复启动。
 - **用户手动启动**：双击 `run.bat`，可见窗口，标题显示地址，Ctrl+C 或关窗口停止。
 - **AI 启动**：前台运行或后台启动但必须：
   - 在回复中说明服务地址、启动方式、停止方式

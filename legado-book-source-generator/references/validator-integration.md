@@ -125,6 +125,8 @@ else:
 curl -s http://localhost:1111/api/sources >nul 2>&1 && echo Running || echo Not running
 ```
 
+**禁止用 `/health` 探测（该端点不存在，返回 404）。只用 `/api/sources`。**
+
 已有服务则复用，不重复启动。
 
 ### 启动
