@@ -1,7 +1,7 @@
 {
   "name": "biquges (蚂蚁文学) — 静态 HTML 全链路",
   "category": "static-html",
-  "sourceFile": "sources/biquges-com.json",
+  "sourceFile": "biquges-com-book-source.json",
   "sourceUrl": "https://www.biquges.com",
   "keyword": "凡人修仙传",
   "mode": "http",

@@ -1,7 +1,7 @@
 {
   "name": "JSON API 站 — JSONPath 规则",
   "category": "json-api",
-  "sourceFile": "sources/json-api-site.json",
+  "sourceFile": "json-api-site.json",
   "sourceUrl": "https://api-example.com",
   "keyword": "测试",
   "mode": "http",

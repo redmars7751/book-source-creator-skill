@@ -195,44 +195,73 @@ class WebServer(port: Int) : NanoWSD(port) {
         val json = String(rawBytes, Charsets.UTF_8)
         return try {
             val req = com.google.gson.JsonParser.parseString(json).asJsonObject
-            val casesDir = req.get("casesDir")?.asString
-                ?: javaClass.getResource("/examples/cases")?.path
-                ?: return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "application/json",
-                    """{"ok":false,"error":"Cases directory not found"}""")
             val caseFilter = req.get("cases")?.asJsonArray?.map { it.asString }?.toSet()
-            val casesDirFile = java.io.File(casesDir)
-            if (!casesDirFile.exists()) {
-                return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json",
-                    """{"ok":false,"error":"Cases directory not found: $casesDir"}""")
+            val externalCasesDir = req.get("casesDir")?.asString?.let { java.io.File(it) }
+
+            // Collect case entries: name → JSON string
+            data class CaseEntry(val name: String, val json: String, val sourceDir: java.io.File?)
+
+            val cases = mutableListOf<CaseEntry>()
+
+            if (externalCasesDir != null && externalCasesDir.exists()) {
+                externalCasesDir.listFiles { f -> f.extension == "json" }?.sorted()?.forEach { f ->
+                    cases.add(CaseEntry(f.nameWithoutExtension, f.readText(), externalCasesDir.parentFile))
+                }
+            } else {
+                // Read from classpath
+                val caseNames = listOf("biquges-full-pipeline", "69shuba-cloudflare", "163zw-js-rules", "json-api-placeholder")
+                for (name in caseNames) {
+                    val stream = javaClass.getResourceAsStream("/examples/cases/$name.json")
+                        ?: javaClass.getResourceAsStream("/examples/$name.json")
+                    if (stream != null) {
+                        cases.add(CaseEntry(name, stream.readBytes().toString(Charsets.UTF_8), null))
+                    }
+                }
             }
-            val caseFiles = casesDirFile.listFiles { f -> f.extension == "json" }?.sorted()
-                ?: return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "application/json",
-                    """{"ok":false,"error":"No case files found"}""")
+
+            if (cases.isEmpty()) {
+                return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json",
+                    """{"ok":false,"error":"No cases found"}""")
+            }
+
             val results = mutableListOf<Map<String, Any?>>()
-            for (caseFile in caseFiles) {
-                if (caseFilter != null && !caseFilter.contains(caseFile.nameWithoutExtension)) continue
+            for (entry in cases) {
+                if (caseFilter != null && !caseFilter.contains(entry.name)) continue
                 try {
-                    val caseJson = com.google.gson.JsonParser.parseString(caseFile.readText()).asJsonObject
-                    val caseName = caseJson.get("name")?.asString ?: caseFile.nameWithoutExtension
+                    val caseJson = com.google.gson.JsonParser.parseString(entry.json).asJsonObject
+                    val caseName = caseJson.get("name")?.asString ?: entry.name
                     val category = caseJson.get("category")?.asString ?: "unknown"
                     val sourceFileName = caseJson.get("sourceFile")?.asString
                     val keyword = caseJson.get("keyword")?.asString ?: ""
                     val mode = caseJson.get("mode")?.asString ?: "http"
                     val expected = caseJson.get("expected")?.asJsonObject
-                    val sourceFile = if (sourceFileName != null) {
-                        java.io.File(casesDirFile.parentFile, sourceFileName)
-                    } else null
-                    if (sourceFile == null || !sourceFile.exists()) {
+
+                    // Resolve source JSON
+                    val sourceJson: String? = when {
+                        entry.sourceDir != null && sourceFileName != null -> {
+                            val sf = java.io.File(entry.sourceDir, sourceFileName)
+                            if (sf.exists()) sf.readText() else null
+                        }
+                        sourceFileName != null -> {
+                            val stream = javaClass.getResourceAsStream("/examples/$sourceFileName")
+                                ?: javaClass.getResourceAsStream("/examples/sources/${sourceFileName.substringAfterLast("/")}")
+                            stream?.readBytes()?.toString(Charsets.UTF_8)
+                        }
+                        else -> null
+                    }
+                    if (sourceJson == null) {
                         results.add(mapOf("case" to caseName, "category" to category, "status" to "skip", "reason" to "Source file not found"))
                         continue
                     }
-                    val sourceJson = sourceFile.readText()
+
                     val sourceList = BookSource.fromJson(sourceJson)
                     sourceList.forEach { sources[it.bookSourceUrl] = it }
                     val source = sourceList.firstOrNull()
                     if (source == null) {
                         results.add(mapOf("case" to caseName, "category" to category, "status" to "skip", "reason" to "No source in file"))
-                    } else {
+                        continue
+                    }
+
                     val runService = DebugService()
                     val steps = runBlocking(Dispatchers.IO) { runService.runFull(source, keyword, mode) }
                     val compactSteps = steps.compact()
@@ -278,9 +307,8 @@ class WebServer(port: Int) : NanoWSD(port) {
                         "phases" to phases,
                         "failures" to failures
                     ))
-                    }
                 } catch (e: Exception) {
-                    results.add(mapOf("case" to caseFile.nameWithoutExtension, "status" to "error", "error" to e.message))
+                    results.add(mapOf("case" to entry.name, "status" to "error", "error" to e.message))
                 }
             }
             val passCount = results.count { it["status"] == "pass" }
