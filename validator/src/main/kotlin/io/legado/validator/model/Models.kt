@@ -31,6 +31,16 @@ data class BookSource(
     var lastUpdateTime: Long = 0,
     var weight: Int = 0
 ) {
+    @Transient
+    private val variableMap = hashMapOf<String, String>()
+
+    fun put(key: String, value: String): String {
+        variableMap[key] = value
+        return value
+    }
+
+    fun get(key: String): String = variableMap[key] ?: ""
+
     companion object {
         val gson: Gson = GsonBuilder().create()
 
