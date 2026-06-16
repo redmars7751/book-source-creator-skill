@@ -558,8 +558,12 @@ class DebugService {
                 val analyzeRule = AnalyzeRule(book, source)
                 analyzeRule.setContent(probeRes.html ?: "", chapter.url)
                 val content = analyzeRule.setFieldName("content").getString(contentRule.content)
+                val jsErrMsg = probeRes.jsError
                 DebugStep(
-                    phase = "content", status = "success", mode = "android",
+                    phase = "content",
+                    status = if (content.isBlank() && jsErrMsg != null) "error" else "success",
+                    mode = "android",
+                    error = if (content.isBlank() && jsErrMsg != null) "webJs 执行错误: $jsErrMsg" else jsErrMsg?.let { "webJs 警告: $it" },
                     extracted = mapOf("chapterTitle" to chapter.title, "contentLength" to content.length),
                     preview = content.take(500),
                     probeAvailable = true,
