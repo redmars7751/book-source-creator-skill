@@ -265,8 +265,14 @@ interface JsExtensions {
 
     // ── Cookie ──
 
-    fun getCookie(tag: String): String = ""
-    fun getCookie(tag: String, key: String?): String = ""
+    fun getCookie(tag: String): String {
+        log("getCookie($tag): validator 无 CookieJar，返回空串")
+        return ""
+    }
+    fun getCookie(tag: String, key: String?): String {
+        log("getCookie($tag, $key): validator 无 CookieJar，返回空串")
+        return ""
+    }
 
     // ── Time ──
 
@@ -286,10 +292,14 @@ interface JsExtensions {
 
     // ── Stubs ──
 
-    fun webView(html: String, url: String, js: String): String =
-        throw UnsupportedOperationException("WebView 需 App 复核")
-    fun webViewGetSource(html: String, url: String, js: String, sourceRegex: String): String =
-        throw UnsupportedOperationException("WebView 需 App 复核")
+    fun webView(html: String, url: String, js: String): String {
+        log("webView($url): 需 App 复核，validator 不支持 WebView 执行")
+        return html
+    }
+    fun webViewGetSource(html: String, url: String, js: String, sourceRegex: String): String {
+        log("webViewGetSource($url): 需 App 复核，validator 不支持 WebView 执行")
+        return html
+    }
     fun getWebViewUA(): String =
         "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36"
     fun androidId(): String = "validator-pc"
