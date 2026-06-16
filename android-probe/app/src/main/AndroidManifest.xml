@@ -6,7 +6,7 @@
     <application
         android:name=".ProbeApp"
         android:label="Legado Probe"
-        android:theme="@android:style/Theme.NoDisplay"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".WebViewProbeActivity"

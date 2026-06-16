@@ -122,7 +122,7 @@ object AndroidProbeService {
             val res = HttpHelper.post(
                 "http://127.0.0.1:$LOCAL_PORT/render",
                 json,
-                headers = mapOf("Content-Type" to "application/json")
+                contentType = "application/json"
             )
             gson.fromJson(res.body, ProbeRenderResponse::class.java)
         } catch (e: Exception) {

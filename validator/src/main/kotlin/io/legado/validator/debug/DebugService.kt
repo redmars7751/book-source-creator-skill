@@ -624,11 +624,26 @@ class DebugService {
                 analyzeRule.setContent(probeRes.html ?: "", chapter.url)
                 val content = analyzeRule.setFieldName("content").getString(contentRule.content)
                 val jsErrMsg = probeRes.jsError
+                val status = if (content.isBlank()) "error" else "success"
+                val error = when {
+                    content.isBlank() && jsErrMsg != null -> "webJs 执行错误: $jsErrMsg"
+                    content.isBlank() -> "正文为空"
+                    jsErrMsg != null -> "webJs 警告: $jsErrMsg"
+                    else -> null
+                }
                 DebugStep(
                     phase = "content",
-                    status = if (content.isBlank() && jsErrMsg != null) "error" else "success",
+                    status = status,
                     mode = "android",
-                    error = if (content.isBlank() && jsErrMsg != null) "webJs 执行错误: $jsErrMsg" else jsErrMsg?.let { "webJs 警告: $it" },
+                    request = DebugStep.RequestInfo(url = chapter.url, method = "GET", headers = source.getHeaderMap(), body = null),
+                    response = DebugStep.ResponseInfo(
+                        code = 200,
+                        contentType = "text/html",
+                        bodyPreview = probeRes.html?.take(2000) ?: "",
+                        bodyLength = probeRes.html?.length ?: 0
+                    ),
+                    error = error,
+                    ruleHits = toRuleHits(analyzeRule.ruleHits),
                     extracted = mapOf("chapterTitle" to chapter.title, "contentLength" to content.length),
                     preview = content.take(500),
                     probeAvailable = true,
