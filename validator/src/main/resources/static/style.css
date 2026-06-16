@@ -334,6 +334,13 @@ body {
   50% { opacity: 0.6; }
 }
 
+.probe-indicator {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding: 0 0.5rem;
+}
+
 .run-icon { font-size: 10px; }
 
 /* ─── Pipeline ─── */

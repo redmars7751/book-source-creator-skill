@@ -323,16 +323,23 @@ function showStepDetail(step) {
 
   // Render
   const renderPanel = document.getElementById('panel-render');
-  if (step.mode === 'browser' || step.renderedHtmlPreview || step.screenshotBase64) {
+  if (step.mode === 'browser' || step.mode === 'android' || step.renderedHtmlPreview || step.screenshotBase64 || step.webViewScreenshotBase64) {
     let html = `<div class="kv-row"><span class="key">模式</span><span class="str">${esc(step.mode)}</span></div>`;
+    if (step.probeAvailable !== undefined && step.probeAvailable !== null) {
+      html += `<div class="kv-row"><span class="key">Probe</span><span class="${step.probeAvailable ? 'ok' : 'err'}">${step.probeAvailable ? '可用' : '不可用'}</span></div>`;
+    }
+    if (step.probeDevice) html += `<div class="kv-row"><span class="key">设备</span><span class="str">${esc(step.probeDevice)}</span></div>`;
+    if (step.androidWebViewVersion) html += `<div class="kv-row"><span class="key">WebView</span><span class="str">${esc(step.androidWebViewVersion)}</span></div>`;
     if (step.finalUrl) html += `<div class="kv-row"><span class="key">最终URL</span><span class="url">${esc(step.finalUrl)}</span></div>`;
     if (step.needsAppReview) html += `<div class="kv-row"><span class="key">需App复核</span><span class="err">${esc(step.reviewReason || '是')}</span></div>`;
     if (step.renderError) html += `<div class="kv-row"><span class="key">渲染错误</span><span class="err">${esc(step.renderError)}</span></div>`;
-    if (step.screenshotBase64) {
-      html += `<div style="margin-top:12px"><img src="data:image/png;base64,${step.screenshotBase64}" style="max-width:100%;border:1px solid var(--border);border-radius:4px" /></div>`;
+    const screenshot = step.webViewScreenshotBase64 || step.screenshotBase64;
+    if (screenshot && !screenshot.startsWith('[')) {
+      html += `<div style="margin-top:12px"><img src="data:image/png;base64,${screenshot}" style="max-width:100%;border:1px solid var(--border);border-radius:4px" /></div>`;
     }
-    if (step.renderedHtmlPreview) {
-      html += `<details style="margin-top:12px"><summary class="dim" style="cursor:pointer">渲染后 HTML 预览 (${step.renderedHtmlPreview.length} 字符)</summary><pre style="margin-top:8px;max-height:300px;overflow:auto;font-size:11px">${esc(step.renderedHtmlPreview)}</pre></details>`;
+    const htmlPreview = step.webViewHtmlPreview || step.renderedHtmlPreview;
+    if (htmlPreview) {
+      html += `<details style="margin-top:12px"><summary class="dim" style="cursor:pointer">HTML 预览 (${htmlPreview.length} 字符)</summary><pre style="margin-top:8px;max-height:300px;overflow:auto;font-size:11px">${esc(htmlPreview)}</pre></details>`;
     }
     renderPanel.innerHTML = html;
   } else {
@@ -397,3 +404,22 @@ document.getElementById('keyword').addEventListener('keydown', (e) => {
 
 // ─── Init ───
 loadSources();
+checkProbeStatus();
+
+async function checkProbeStatus() {
+  const el = document.getElementById('probe-status');
+  try {
+    const res = await fetch(`${API}/api/probe/status`);
+    const info = await res.json();
+    if (info.available) {
+      el.textContent = `🟢 ${info.device?.serial || 'Probe'}`;
+      el.title = `Version: ${info.probeVersion || 'unknown'}`;
+      el.style.color = 'var(--success)';
+    } else {
+      el.textContent = `🔴 ${info.error || 'No probe'}`;
+      el.title = info.error || '';
+    }
+  } catch (e) {
+    el.textContent = '🔴 Probe unreachable';
+  }
+}
