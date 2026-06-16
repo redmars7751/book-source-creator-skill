@@ -17,11 +17,13 @@ data class DebugStep(
     val screenshotBase64: String? = null,
     val renderError: String? = null,
     val needsAppReview: Boolean = false,
-    val reviewReason: String? = null
+    val reviewReason: String? = null,
+    val compatibilityWarnings: List<CompatibilityWarning>? = null
 ) {
     data class RequestInfo(val url: String, val method: String, val headers: Map<String, String>, val body: String?)
     data class ResponseInfo(val code: Int, val contentType: String?, val bodyPreview: String, val bodyLength: Int)
     data class RuleHit(val field: String, val rule: String, val value: String?, val success: Boolean)
+    data class CompatibilityWarning(val feature: String, val description: String)
 
     fun compact(): DebugStep {
         if (phase != "toc" || !extracted.containsKey("chapters")) return this
@@ -37,3 +39,16 @@ data class DebugStep(
 }
 
 fun List<DebugStep>.compact(): List<DebugStep> = map { it.compact() }
+
+fun determineFinalStatus(steps: List<DebugStep>): String {
+    val hasUnsupportedFeature = steps.any { !it.compatibilityWarnings.isNullOrEmpty() }
+    val allPassed = steps.all { it.status == "success" }
+    val hasAppReview = steps.any { it.needsAppReview }
+
+    return when {
+        hasAppReview -> "needs_app_review"
+        hasUnsupportedFeature && allPassed -> "validator_limitation"
+        allPassed -> "passed"
+        else -> "failed"
+    }
+}

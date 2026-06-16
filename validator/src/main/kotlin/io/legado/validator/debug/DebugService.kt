@@ -24,12 +24,37 @@ class DebugService {
 
     fun getSteps(): List<DebugStep> = steps.toList()
 
+    private fun collectWarnings(source: BookSource): List<DebugStep.CompatibilityWarning> {
+        val warnings = mutableListOf<DebugStep.CompatibilityWarning>()
+        if (source.enabledCookieJar == true) {
+            warnings.add(DebugStep.CompatibilityWarning(
+                "cookieJar", "源启用了 enabledCookieJar，validator 无持久 Cookie，结果可能与 App 不一致"
+            ))
+        }
+        if (!source.jsLib.isNullOrBlank()) {
+            warnings.add(DebugStep.CompatibilityWarning(
+                "jsLib", "源使用了 jsLib，validator 已尝试加载但复杂依赖可能不完整"
+            ))
+        }
+        if (!source.loginUrl.isNullOrBlank()) {
+            warnings.add(DebugStep.CompatibilityWarning(
+                "loginUrl", "源定义了登录流程，validator 无法执行登录"
+            ))
+        }
+        return warnings
+    }
+
+    private fun DebugStep.withWarnings(warnings: List<DebugStep.CompatibilityWarning>): DebugStep {
+        return copy(compatibilityWarnings = warnings.ifEmpty { null })
+    }
+
     suspend fun runFull(source: BookSource, keyword: String, mode: String = "http"): List<DebugStep> {
         steps.clear()
         val book = Book()
+        val warnings = collectWarnings(source)
 
         // Step 1: Search
-        val searchStep = if (mode == "browser") {
+        val searchStep = (if (mode == "browser") {
             runSearchBrowser(source, keyword)
         } else {
             val httpStep = runSearch(source, keyword)
@@ -37,7 +62,7 @@ class DebugService {
                 val browserStep = runSearchBrowser(source, keyword)
                 if (browserStep.status == "success") browserStep else httpStep
             } else httpStep
-        }
+        }).withWarnings(warnings)
         steps.add(searchStep)
         listener?.invoke(searchStep)
         if (searchStep.status == "error") return steps.toList()
@@ -52,13 +77,13 @@ class DebugService {
         book.tocUrl = firstBook.bookUrl
 
         // Step 2: Detail
-        val detailStep = runDetail(source, book, actualMode)
+        val detailStep = runDetail(source, book, actualMode).withWarnings(warnings)
         steps.add(detailStep)
         listener?.invoke(detailStep)
         if (detailStep.status == "error") return steps.toList()
 
         // Step 3: TOC
-        val tocStep = runToc(source, book, actualMode)
+        val tocStep = runToc(source, book, actualMode).withWarnings(warnings)
         steps.add(tocStep)
         listener?.invoke(tocStep)
         if (tocStep.status == "error") return steps.toList()
@@ -67,7 +92,7 @@ class DebugService {
 
         // Step 4: Content (first 2 chapters)
         for (ch in chapters.take(2)) {
-            val contentStep = runContent(source, book, ch, actualMode)
+            val contentStep = runContent(source, book, ch, actualMode).withWarnings(warnings)
             steps.add(contentStep)
             listener?.invoke(contentStep)
         }
