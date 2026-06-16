@@ -41,10 +41,18 @@ class ProbeHttpServer(
     }
 
     private fun handleInfo(): Response {
+        val webViewPackage = try {
+            android.webkit.WebView.getCurrentWebViewPackage()
+        } catch (_: Exception) { null }
         val info = mapOf(
             "name" to "legado-android-probe",
             "version" to "0.1.0",
-            "api" to listOf("/render", "/ping", "/info")
+            "api" to listOf("/render", "/ping", "/info"),
+            "androidSdk" to android.os.Build.VERSION.SDK_INT,
+            "androidRelease" to android.os.Build.VERSION.RELEASE,
+            "webViewPackage" to webViewPackage?.packageName,
+            "webViewVersion" to webViewPackage?.versionName,
+            "deviceModel" to "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
         )
         return newFixedLengthResponse(Response.Status.OK, "application/json", gson.toJson(info))
     }

@@ -46,6 +46,8 @@ class WebViewRunner(private val context: Context) {
                         override fun onReceivedSslError(
                             view: WebView, sslHandler: SslErrorHandler, error: SslError
                         ) {
+                            // Match legado behavior: ALL WebViewClients call handler.proceed()
+                            // See BackstageWebView.HtmlWebViewClient, WebViewActivity, etc.
                             sslHandler.proceed()
                         }
 

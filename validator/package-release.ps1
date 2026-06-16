@@ -47,6 +47,18 @@ Copy-Item "$root\run.bat" $validatorStaging
 Copy-Item "$root\stop.bat" $validatorStaging
 Copy-Item "$root\README.txt" $validatorStaging
 
+# 复制 Android Probe APK
+$apk = "$projectRoot\android-probe\app\build\outputs\apk\debug\app-debug.apk"
+if (Test-Path $apk) {
+    Copy-Item $apk "$validatorStaging\android-probe.apk"
+    Write-Host "APK: $([math]::Round((Get-Item $apk).Length / 1MB, 1)) MB"
+} else {
+    Write-Host "WARN: APK not found. Run 'android-probe gradlew assembleDebug' first."
+}
+
+# 复制 setup-android-probe.bat
+Copy-Item "$root\setup-android-probe.bat" $validatorStaging -ErrorAction SilentlyContinue
+
 # 复制验证样例
 Copy-Item "$root\examples\sources" "$validatorStaging\examples\sources" -Recurse -ErrorAction SilentlyContinue
 Copy-Item "$root\examples\cases" "$validatorStaging\examples\cases" -Recurse -ErrorAction SilentlyContinue

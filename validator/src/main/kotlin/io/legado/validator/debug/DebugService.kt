@@ -489,37 +489,85 @@ class DebugService {
                     probeAvailable = false
                 )
             }
+            val searchUrl = source.searchUrl ?: ""
+            val analyzeUrl = AnalyzeUrl(mUrl = searchUrl, key = keyword, page = 1, source = source)
+            val needsWebView = analyzeUrl.hasWebView
             try {
                 WebBook.clearState()
-                val books = WebBook.searchBookAwait(source, keyword)
-                val res = WebBook.lastResponse
-                val first = books.firstOrNull()
-                val reqInfo = buildRequestInfo()
-                val resInfo = buildResponseInfo(res)
-                if (first != null) {
-                    DebugStep(
+                if (needsWebView) {
+                    val probeReq = ProbeRenderRequest(
+                        url = analyzeUrl.url, headers = analyzeUrl.headerMap,
+                        timeout = 60000L, screenshot = true
+                    )
+                    val probeRes = AndroidProbeService.render(probeReq)
+                    if (!probeRes.ok) {
+                        return@withContext DebugStep(
+                            phase = "search", status = "error", mode = "android",
+                            error = "Probe 搜索渲染失败: ${probeRes.error}",
+                            probeAvailable = true, probeDevice = probeInfo.device?.serial,
+                            androidWebViewVersion = probeInfo.webViewVersion,
+                            webViewHtmlPreview = probeRes.html?.take(2000),
+                            webViewScreenshotBase64 = probeRes.screenshotBase64
+                        )
+                    }
+                    val ruleData = io.legado.validator.analyzeRule.RuleData()
+                    val analyzeRule = io.legado.validator.analyzeRule.AnalyzeRule(ruleData, source)
+                    analyzeRule.setContent(probeRes.html ?: "", analyzeUrl.url)
+                    val searchRule = source.getSearchRule()
+                    val elements = analyzeRule.getElements(searchRule.bookList ?: "")
+                    val books = elements.mapNotNull { element ->
+                        analyzeRule.setContent(element)
+                        val name = analyzeRule.getString(searchRule.name)
+                        if (name.isBlank()) null
+                        else io.legado.validator.model.SearchBook(
+                            bookUrl = analyzeRule.getString(searchRule.bookUrl, isUrl = true),
+                            name = name, author = analyzeRule.getString(searchRule.author),
+                            coverUrl = analyzeRule.getString(searchRule.coverUrl),
+                            intro = analyzeRule.getString(searchRule.intro)
+                        )
+                    }
+                    val first = books.firstOrNull()
+                    if (first != null) DebugStep(
+                        phase = "search", status = "success", mode = "android",
+                        extracted = mapOf("resultCount" to books.size, "firstBook" to first, "books" to books.take(10)),
+                        probeAvailable = true, probeDevice = probeInfo.device?.serial,
+                        androidWebViewVersion = probeInfo.webViewVersion,
+                        webViewHtmlPreview = probeRes.html?.take(2000),
+                        webViewScreenshotBase64 = probeRes.screenshotBase64
+                    ) else DebugStep(
+                        phase = "search", status = "error", mode = "android",
+                        error = "Probe 搜索渲染成功但未提取到结果",
+                        probeAvailable = true, probeDevice = probeInfo.device?.serial,
+                        androidWebViewVersion = probeInfo.webViewVersion,
+                        webViewHtmlPreview = probeRes.html?.take(2000),
+                        webViewScreenshotBase64 = probeRes.screenshotBase64
+                    )
+                } else {
+                    val books = WebBook.searchBookAwait(source, keyword)
+                    val res = WebBook.lastResponse
+                    val first = books.firstOrNull()
+                    val reqInfo = buildRequestInfo()
+                    val resInfo = buildResponseInfo(res)
+                    if (first != null) DebugStep(
                         phase = "search", status = "success", mode = "android",
                         request = reqInfo, response = resInfo,
                         ruleHits = toRuleHits(WebBook.lastRuleHits),
                         extracted = mapOf("resultCount" to books.size, "firstBook" to first, "books" to books.take(10)),
-                        probeAvailable = true,
-                        probeDevice = probeInfo.device?.serial
-                    )
-                } else {
-                    DebugStep(
+                        probeAvailable = true, probeDevice = probeInfo.device?.serial,
+                        androidWebViewVersion = probeInfo.webViewVersion
+                    ) else DebugStep(
                         phase = "search", status = "error", mode = "android",
-                        request = reqInfo, response = resInfo,
-                        error = "搜索结果为空",
-                        probeAvailable = true,
-                        probeDevice = probeInfo.device?.serial
+                        request = reqInfo, response = resInfo, error = "搜索结果为空",
+                        probeAvailable = true, probeDevice = probeInfo.device?.serial,
+                        androidWebViewVersion = probeInfo.webViewVersion
                     )
                 }
             } catch (e: Exception) {
                 DebugStep(
                     phase = "search", status = "error", mode = "android",
                     error = "${e::class.simpleName}: ${e.message}",
-                    probeAvailable = true,
-                    probeDevice = probeInfo.device?.serial
+                    probeAvailable = true, probeDevice = probeInfo.device?.serial,
+                    androidWebViewVersion = probeInfo.webViewVersion
                 )
             }
         }
@@ -551,7 +599,8 @@ class DebugService {
                         error = probeRes.error ?: "Probe render failed",
                         probeAvailable = true,
                         probeDevice = probeInfo.device?.serial,
-                        webViewHtmlPreview = probeRes.html?.take(2000),
+                            androidWebViewVersion = probeInfo.webViewVersion,
+                            webViewHtmlPreview = probeRes.html?.take(2000),
                         webViewScreenshotBase64 = probeRes.screenshotBase64
                     )
                 }
@@ -568,6 +617,7 @@ class DebugService {
                     preview = content.take(500),
                     probeAvailable = true,
                     probeDevice = probeInfo.device?.serial,
+                    androidWebViewVersion = probeInfo.webViewVersion,
                     webViewHtmlPreview = probeRes.html?.take(2000),
                     webViewScreenshotBase64 = probeRes.screenshotBase64
                 )
@@ -589,10 +639,12 @@ class DebugService {
 fun determineFinalStatus(steps: List<DebugStep>): String {
     val hasNeedsAppReview = steps.any { it.needsAppReview }
     val hasUnsupportedFeature = steps.any { !it.compatibilityWarnings.isNullOrEmpty() }
+    val hasProbeUnavailable = steps.any { it.mode == "android" && it.probeAvailable == false }
     val allPassed = steps.all { it.status == "success" }
 
     return when {
         hasNeedsAppReview -> "needs_app_review"
+        hasProbeUnavailable -> "validator_limitation"
         hasUnsupportedFeature && allPassed -> "validator_limitation"
         allPassed -> "passed"
         else -> "failed"

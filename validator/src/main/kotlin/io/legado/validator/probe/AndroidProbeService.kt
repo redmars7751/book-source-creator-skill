@@ -109,18 +109,67 @@ object AndroidProbeService {
         }
     }
 
-    fun probeCheck(): ProbeInfo {
+    fun installApk(adbPath: String, serial: String, apkPath: String): Boolean {
+        return try {
+            val p = ProcessBuilder(adbPath, "-s", serial, "install", "-r", apkPath).start()
+            val output = p.inputStream.bufferedReader().readText()
+            p.waitFor()
+            p.exitValue() == 0 && output.contains("Success")
+        } catch (_: Exception) { false }
+    }
+
+    fun startProbe(adbPath: String, serial: String): Boolean {
+        return try {
+            val p = ProcessBuilder(adbPath, "-s", serial, "shell", "am", "start",
+                "-n", "io.legado.probe/.WebViewProbeActivity").start()
+            p.waitFor()
+            p.exitValue() == 0
+        } catch (_: Exception) { false }
+    }
+
+    fun findApk(): String? {
+        // Check common locations relative to validator working dir
+        val candidates = listOf(
+            "android-probe/app/build/outputs/apk/debug/app-debug.apk",
+            "../android-probe/app/build/outputs/apk/debug/app-debug.apk",
+            "probe.apk"
+        )
+        for (c in candidates) {
+            val f = File(c)
+            if (f.exists()) return f.absolutePath
+        }
+        return null
+    }
+
+    fun probeCheck(autoInstall: Boolean = true): ProbeInfo {
         val adb = findAdb() ?: return ProbeInfo(available = false, error = "adb not found")
         val devices = listDevices(adb)
         if (devices.isEmpty()) return ProbeInfo(available = false, error = "No Android devices connected")
         val device = devices.first()
         if (!setupForward(adb, device.serial)) return ProbeInfo(available = false, device = device, error = "adb forward failed")
-        if (!ping()) return ProbeInfo(available = false, device = device, error = "Probe not responding on port $LOCAL_PORT")
+        if (!ping()) {
+            if (autoInstall) {
+                val apk = findApk()
+                if (apk != null) {
+                    installApk(adb, device.serial, apk)
+                    startProbe(adb, device.serial)
+                    Thread.sleep(2000) // wait for server startup
+                    if (ping()) {
+                        val probeInfo = info()
+                        return ProbeInfo(available = true, device = device,
+                            probeVersion = probeInfo?.get("version")?.toString(),
+                            webViewVersion = probeInfo?.get("webViewVersion")?.toString())
+                    }
+                }
+            }
+            return ProbeInfo(available = false, device = device, error = "Probe not responding on port $LOCAL_PORT")
+        }
         val probeInfo = info()
         return ProbeInfo(
             available = true,
             device = device,
-            probeVersion = probeInfo?.get("version")?.toString()
+            probeVersion = probeInfo?.get("version")?.toString(),
+            webViewVersion = probeInfo?.get("webViewVersion")?.toString()
         )
     }
 }
