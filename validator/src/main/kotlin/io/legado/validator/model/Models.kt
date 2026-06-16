@@ -6,6 +6,8 @@ import com.google.gson.reflect.TypeToken
 import io.legado.validator.model.rule.*
 import io.legado.validator.analyzeRule.RuleData
 import io.legado.validator.analyzeRule.RuleDataInterface
+import io.legado.validator.analyzeRule.RhinoAdapter
+import io.legado.validator.help.JsHelper
 
 data class BookSource(
     var bookSourceUrl: String = "",
@@ -61,9 +63,23 @@ data class BookSource(
 
     fun getHeaderMap(): Map<String, String> {
         if (header.isNullOrBlank()) return emptyMap()
+        val headerStr = header!!.trim()
+        val resolved = try {
+            if (headerStr.startsWith("@js:")) {
+                RhinoAdapter.eval(headerStr.substring(4), mapOf("source" to this, "java" to JsHelper))
+            } else if (headerStr.startsWith("<js>") && headerStr.endsWith("</js>")) {
+                RhinoAdapter.eval(headerStr.substring(4, headerStr.length - 5), mapOf("source" to this, "java" to JsHelper))
+            } else null
+        } catch (_: Exception) { null }
+        val jsonStr = when {
+            resolved is Map<*, *> -> resolved.entries.associate { (k, v) -> k.toString() to v.toString() }
+                .let { gson.toJson(it) }
+            resolved != null -> resolved.toString()
+            else -> headerStr
+        }
         return try {
             val type = object : TypeToken<Map<String, String>>() {}.type
-            gson.fromJson(header, type)
+            gson.fromJson(jsonStr, type)
         } catch (e: Exception) { emptyMap() }
     }
 }
