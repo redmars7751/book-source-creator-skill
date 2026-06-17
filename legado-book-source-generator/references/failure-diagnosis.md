@@ -75,24 +75,6 @@ validator 返回失败后，按以下顺序检查：
 
 **修复**: 停止自动修，标记 `needs_app_review`
 
-### CSR 正文 — WebView 返回空（4 字符 HTML）
-
-**症状**: Android mode content 返回 `webViewHtmlPreview: "null"`（4 chars），HTTP mode 正常（search/detail/toc success）
-
-**原因**: `JsExtensions.getCookie()` 遗留硬编码返回 `""`，导致 header JS（如 `java.getCookie('https://novalpie.cc')`）无法从 CookieStore 读取 JWT/认证信息。Authorization header 始终为空，WebView 加载 CSR 页面时 Nuxt/Next.js 的 API 调用无认证 → 页面不渲染 → evaluateJavascript 返回 null。
-
-**诊断**: 检查 `validator/src/main/kotlin/io/legado/validator/help/JsExtensions.kt:268-270`，确认 `getCookie()` 是否已改为读取 `CookieStore`（v0.4.1 后已修复）。
-
-**修复**: 无需用户操作（已修）。如果发现类似问题，检查 header JS 是否依赖 `java.getCookie()`，确认 CookieStore 中是否有对应域名的 cookie。
-
-### chapterUrl 中 webView options 导致的 probe URL 污染
-
-**症状**: Android mode 下 content `webViewHtmlPreview` 只有 4 chars（与上条同症状），但 HTTP mode 正常。debug step 显示 `request.url` 末尾带有 `,%7B%22webView%22%3Atrue%7D` 或 `,{"webView":true}`。
-
-**原因**: JsonPath 模板（如 `/book/{{$.novelId}}/{{$.id}},{"webView":true}`）中，`{{ }}` 替换后 `,{"webView":true}` 保留在 URL 中。Legado 的 `AnalyzeUrl` 会解析 URL options 并剥离，但 probe 直接使用 `chapter.url` 作为请求 URL，导致 probe 收到的 URL 包含 JSON 垃圾后缀。
-
-**修复**: `DebugService.runContentAndroid` 现在自动用 regex 清洗 URL（v0.4.1+）。如果用旧版 validator，手动去掉 chapterUrl 中的 `,{"webView":true}` 后缀，改用 JS 模板（`{{ }}` 块）把 options 放在块外。
-
 ### TOC chapterCount=1
 
 **症状**: validator HTTP mode 下 search/detail 正常，toc success 但 `chapterCount` 为 1（站点实际有几百章）

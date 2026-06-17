@@ -84,9 +84,8 @@
 1. **Browser MCP 提取**：用户在桌面浏览器登录 → AI 通过 `browser_network_requests` 提取 Cookie/Authorization header → 注入 validator（`--cookie=` 参数或 API `/api/cookie/set`）
 2. **App 登录后同步**：用户在 Legado App 内通过 `loginUrl` 登录 → Legado 将 cookie 存入 Room DB → （未来）validator 可从 App 导出导入
 
-**常见坑**：
-- 旧版 validator 的 `java.getCookie()` 硬编码返回 `""`（v0.4.1 前），导致 header JS 永为空
-- Cookie 是 HttpOnly 时，`document.cookie` 在 WebView 中不可读，但 `CookieManager` 层面的注入仍有效
+**注意**：
+- Cookie 是 HttpOnly 时，`document.cookie` 在 WebView 中不可读，但 `java.getCookie()` 通过 CookieStore 仍能获取
 - JWT token 有有效期，验证前确认 token 未过期
 
 ## 交付自检
