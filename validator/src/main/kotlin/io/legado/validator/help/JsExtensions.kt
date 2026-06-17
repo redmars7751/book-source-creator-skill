@@ -264,14 +264,18 @@ interface JsExtensions {
     }
 
     // ── Cookie ──
+    // 对齐 Legado: 从 CookieStore 读取已持久化的 Cookie
+    // 用于 header JS (如 java.getCookie('https://novalpie.cc')) 和 webJs 等场景
 
     fun getCookie(tag: String): String {
-        log("getCookie($tag): validator 无 CookieJar，返回空串")
-        return ""
+        val domain = try { java.net.URL(tag).host.lowercase() } catch (_: Exception) { tag.lowercase() }
+        return io.legado.validator.web.CookieStore.getCookie(domain) ?: ""
     }
     fun getCookie(tag: String, key: String?): String {
-        log("getCookie($tag, $key): validator 无 CookieJar，返回空串")
-        return ""
+        val cookie = getCookie(tag)
+        if (key == null || cookie.isEmpty()) return cookie
+        val match = Regex("$key=([^;]*)").find(cookie)
+        return match?.groupValues?.getOrNull(1) ?: ""
     }
 
     // ── Time ──
