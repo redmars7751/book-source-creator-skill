@@ -142,7 +142,15 @@ object AndroidProbeService {
                 .build()
             val response = probeClient.newCall(httpRequest).execute()
             val body = response.body?.string() ?: ""
-            gson.fromJson(body, ProbeRenderResponse::class.java)
+            val renderResponse = gson.fromJson(body, ProbeRenderResponse::class.java)
+            // Gap #10: persist WebView cookies — matches Legado BackstageWebView.setCookie()
+            if (renderResponse.ok && !renderResponse.cookies.isNullOrEmpty()) {
+                val domain = try { java.net.URL(renderResponse.finalUrl ?: request.url).host.lowercase() } catch (_: Exception) { "" }
+                if (domain.isNotEmpty()) {
+                    io.legado.validator.web.CookieStore.setCookie(domain, renderResponse.cookies)
+                }
+            }
+            renderResponse
         } catch (e: Exception) {
             ProbeRenderResponse(ok = false, error = "Probe request failed: ${e.message}")
         }
