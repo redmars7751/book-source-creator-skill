@@ -31,6 +31,10 @@ class WebServer(port: Int) : NanoWSD(port) {
             uri == "/api/debug/run" && session.method == Method.POST -> handleRunDebug(session)
             uri == "/api/debug/smoke" && session.method == Method.POST -> handleSmoke(session)
             uri == "/api/probe/status" && session.method == Method.GET -> handleProbeStatus()
+            uri == "/api/cookie/set" && session.method == Method.POST -> handleCookieSet(session)
+            uri == "/api/cookie/get" && session.method == Method.GET -> handleCookieGet(session)
+            uri == "/api/cookie/clear" && session.method == Method.POST -> handleCookieClear(session)
+            uri == "/api/cookie/list" && session.method == Method.GET -> handleCookieList()
             uri.startsWith("/api/source/") && session.method == Method.DELETE -> {
                 val encoded = uri.removePrefix("/api/source/")
                 val sourceUrl = String(Base64.getUrlDecoder().decode(encoded))
@@ -369,5 +373,58 @@ class WebServer(port: Int) : NanoWSD(port) {
     private fun handleProbeStatus(): Response {
         val info = AndroidProbeService.probeCheck()
         return newFixedLengthResponse(Response.Status.OK, "application/json", Gson().toJson(info))
+    }
+
+    private fun handleCookieSet(session: IHTTPSession): Response {
+        return try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val json = bodyMap["postData"] ?: return newFixedLengthResponse(
+                Response.Status.BAD_REQUEST, "application/json", """{"error":"Empty body"}""")
+            val req = Gson().fromJson(json, com.google.gson.JsonObject::class.java)
+            val domain = req.get("domain")?.asString ?: return newFixedLengthResponse(
+                Response.Status.BAD_REQUEST, "application/json", """{"error":"Missing domain"}""")
+            val cookie = req.get("cookie")?.asString ?: return newFixedLengthResponse(
+                Response.Status.BAD_REQUEST, "application/json", """{"error":"Missing cookie"}""")
+            CookieStore.setCookie(domain, cookie)
+            newFixedLengthResponse(Response.Status.OK, "application/json", """{"ok":true}""")
+        } catch (e: Exception) {
+            newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "application/json",
+                """{"ok":false,"error":"${e.message?.replace("\"", "\\\"")}"}""")
+        }
+    }
+
+    private fun handleCookieGet(session: IHTTPSession): Response {
+        val domain = session.parms["domain"] ?: return newFixedLengthResponse(
+            Response.Status.BAD_REQUEST, "application/json", """{"error":"Missing domain param"}""")
+        val cookie = CookieStore.getCookie(domain)
+        return newFixedLengthResponse(Response.Status.OK, "application/json",
+            """{"domain":"$domain","cookie":${if (cookie != null) "\"$cookie\"" else "null"}}""")
+    }
+
+    private fun handleCookieClear(session: IHTTPSession): Response {
+        return try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val json = bodyMap["postData"] ?: "{}"
+            val req = Gson().fromJson(json, com.google.gson.JsonObject::class.java)
+            if (req.has("all") && req.get("all").asBoolean) {
+                CookieStore.clearAll()
+            } else {
+                val domain = req.get("domain")?.asString ?: return newFixedLengthResponse(
+                    Response.Status.BAD_REQUEST, "application/json", """{"error":"Missing domain"}""")
+                CookieStore.clearCookie(domain)
+            }
+            newFixedLengthResponse(Response.Status.OK, "application/json", """{"ok":true}""")
+        } catch (e: Exception) {
+            newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "application/json",
+                """{"ok":false,"error":"${e.message?.replace("\"", "\\\"")}"}""")
+        }
+    }
+
+    private fun handleCookieList(): Response {
+        val all = CookieStore.getAll()
+        val json = Gson().toJson(all)
+        return newFixedLengthResponse(Response.Status.OK, "application/json", json)
     }
 }

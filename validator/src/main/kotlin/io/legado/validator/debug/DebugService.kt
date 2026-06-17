@@ -77,6 +77,7 @@ class DebugService {
         steps.clear()
         val book = Book()
         val warnings = collectWarnings(source)
+        val sessionMode = if (io.legado.validator.web.CookieStore.hasCookies()) "authenticated" else "anonymous"
 
         // Step 1: Search
         val searchStep = (when (mode) {
@@ -114,7 +115,7 @@ class DebugService {
                     runSearch(source, keyword)
                 }
             }
-        }).withWarnings(warnings)
+        }).withWarnings(warnings).copy(sessionMode = sessionMode)
         steps.add(searchStep)
         listener?.invoke(searchStep)
         if (searchStep.status == "error") return steps.toList()
@@ -129,13 +130,13 @@ class DebugService {
         book.tocUrl = firstBook.bookUrl
 
         // Step 2: Detail
-        val detailStep = runDetail(source, book, actualMode).withWarnings(warnings)
+        val detailStep = runDetail(source, book, actualMode).withWarnings(warnings).copy(sessionMode = sessionMode)
         steps.add(detailStep)
         listener?.invoke(detailStep)
         if (detailStep.status == "error") return steps.toList()
 
         // Step 3: TOC
-        val tocStep = runToc(source, book, actualMode).withWarnings(warnings)
+        val tocStep = runToc(source, book, actualMode).withWarnings(warnings).copy(sessionMode = sessionMode)
         steps.add(tocStep)
         listener?.invoke(tocStep)
         if (tocStep.status == "error") return steps.toList()
@@ -148,7 +149,7 @@ class DebugService {
                 runContentAndroid(source, book, ch)
             } else {
                 runContent(source, book, ch, actualMode)
-            }.withWarnings(warnings)
+            }.withWarnings(warnings).copy(sessionMode = sessionMode)
             steps.add(contentStep)
             listener?.invoke(contentStep)
         }

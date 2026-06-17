@@ -146,6 +146,15 @@ class AnalyzeUrl(
                 } catch (_: Exception) {}
             }
         }
+        // 注入 CookieStore 中的 Cookie（如果 header 中没有手动设置）
+        if (!headerMap.containsKey("Cookie") && !headerMap.containsKey("cookie")) {
+            try {
+                val domain = java.net.URL(url).host.lowercase()
+                io.legado.validator.web.CookieStore.getCookie(domain)?.let {
+                    headerMap["Cookie"] = it
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     suspend fun getStrResponseAwait(): StrResponse = withContext(Dispatchers.IO) {
