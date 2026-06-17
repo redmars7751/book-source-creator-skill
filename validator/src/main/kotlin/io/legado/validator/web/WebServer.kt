@@ -179,7 +179,7 @@ class WebServer(port: Int) : NanoWSD(port) {
                 }
             }
 
-            val finalStatus = io.legado.validator.debug.determineFinalStatus(steps)
+            val finalStatus = io.legado.validator.debug.determineFinalStatus(steps, source)
             val allWarnings = steps.flatMap { it.compatibilityWarnings ?: emptyList() }.distinctBy { it.feature }
 
             val result = buildString {

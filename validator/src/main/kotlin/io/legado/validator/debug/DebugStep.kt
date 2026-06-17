@@ -24,7 +24,9 @@ data class DebugStep(
     val probeDevice: String? = null,
     val androidWebViewVersion: String? = null,
     val webViewHtmlPreview: String? = null,
-    val webViewScreenshotBase64: String? = null
+    val webViewScreenshotBase64: String? = null,
+    // P10 会话模式
+    val sessionMode: String = "anonymous"   // "anonymous" | "authenticated"
 ) {
     data class RequestInfo(val url: String, val method: String, val headers: Map<String, String>, val body: String?)
     data class ResponseInfo(val code: Int, val contentType: String?, val bodyPreview: String, val bodyLength: Int)

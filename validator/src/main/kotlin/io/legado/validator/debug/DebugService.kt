@@ -667,16 +667,24 @@ class DebugService {
     }
 }
 
-fun determineFinalStatus(steps: List<DebugStep>): String {
+fun determineFinalStatus(steps: List<DebugStep>, source: BookSource? = null): String {
     val hasNeedsAppReview = steps.any { it.needsAppReview }
     val hasUnsupportedFeature = steps.any { !it.compatibilityWarnings.isNullOrEmpty() }
     val hasProbeUnavailable = steps.any { it.mode == "android" && it.probeAvailable == false }
     val allPassed = steps.all { it.status == "success" }
+    val isAnonymous = steps.all { it.sessionMode != "authenticated" }
+    val hasLoginVertex = source != null && (
+        !source.loginUrl.isNullOrBlank() ||
+        source.enabledCookieJar == true ||
+        (!source.header.isNullOrBlank() && source.header!!.contains("Authorization", ignoreCase = true)) ||
+        !source.getContentRule().webJs.isNullOrBlank()
+    )
 
     return when {
         hasNeedsAppReview -> "needs_app_review"
         hasProbeUnavailable -> "validator_limitation"
         hasUnsupportedFeature && allPassed -> "validator_limitation"
+        allPassed && isAnonymous && hasLoginVertex -> "anonymous_candidate"
         allPassed -> "passed"
         else -> "failed"
     }
