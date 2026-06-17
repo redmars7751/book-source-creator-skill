@@ -364,8 +364,8 @@ npm test
 ### 当前已知限制
 
 - validator 已支持通过 Android Probe 调用真实 Android WebView 复核部分 `webView:true` / `webJs` 场景，但需要已连接的 Android 设备或模拟器。
-- Android Probe 通过只代表该设备 WebView 环境下通过，不等于阅读 App 100% 通过。
-- validator 已支持临时导入 Cookie，并会按域名注入 HTTP 请求和 Android Probe WebView；Cookie 不会写入书源 JSON，也不应提交到仓库或 Release。
+- validator Cookie 支持本地持久化（`validator-cookies.json`），重启不丢失；也可通过 `COOKIE_STORE` 环境变量指定路径。
+- Android Probe WebView 渲染后自动将 Set-Cookie 回存到本地 CookieStore，后续请求自动携带。
 - `anonymous_candidate` 表示匿名链路通过但存在登录态、Cookie、WebView 或 token 依赖，不能标为可用，必须继续做登录态或 App/WebView 复核。
 - Cloudflare、验证码、付费墙、会员权限、DRM、强风控等访问控制不会也不应被绕过，只能标记 `needs_app_review`。
 - `validator passed` 只代表当前 search/detail/toc/content 技术链路跑通，不代表书源质量、长期可用性、合法可用性或阅读体验完整。

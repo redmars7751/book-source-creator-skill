@@ -17,7 +17,7 @@
 | 外层超时 | 60s | 60s (可配置) | OkHttp 60s |
 | webJs 支持 | evaluateJavascript(webJs) | evaluateJavascript(webJs) | Rhino evalJS |
 | sourceRegex | onLoadResource 匹配 | 不实现 (P10) | N/A |
-| Cookie 管理 | CookieManager → CookieStore | 返回 cookie 字符串 | 无 |
+| Cookie 管理 | CookieManager → CookieStore | CookieManager → CookieStore 持久化 | 无 |
 | 截图 | 无 | Bitmap → Base64 PNG | N/A |
 | POST body | 不支持 (WebView 是 GET) | 不支持 | 支持 |
 
@@ -25,8 +25,8 @@
 
 1. **evaluateJavascript vs loadUrl("javascript:")**: 阅读的 SnifferWebClient 用 `loadUrl("javascript:...")`（fire-and-forget），但 BackstageWebView 用 `evaluateJavascript()`（有回调）。P9 只实现后者。
 2. **sourceRegex**: 阅读在 `onLoadResource` 时匹配资源 URL 做嗅探。P9 不实现（需要拦截所有资源请求，复杂度高，放 P10）。
-3. **POST**: `WebView.loadUrl()` 只支持 GET。阅读对 POST 的处理是先 OkHttp POST，再把响应 HTML 加载到 WebView。P9 暂不实现此路径。
-4. **Cookie**: 阅读把 cookie 存入 Room DB 做持久化。P9 只返回 cookie 字符串，不做持久化。
+3. **POST**: `WebView.loadUrl()` 只支持 GET。阅读对 POST 的处理是先 OkHttp POST，再把响应 HTML 通过 `loadDataWithBaseURL` 加载到 WebView。Probe 已实现此路径（`html` 字段非空时走 `loadDataWithBaseURL`）。
+4. **Cookie**: 阅读把 cookie 存入 Room DB 做持久化。Probe 现已将 WebView 渲染后的 cookie 回存到 validator 的 CookieStore（本地 JSON 文件持久化），重启不丢失。
 5. **SSL**: 阅读所有 WebViewClient 都 `handler.proceed()` 忽略 SSL 错误。P9 同样实现。
 6. **UA**: 阅读默认 UA 是 `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/{version}`。P9 从 source.headerMap 传入，保持一致。
 

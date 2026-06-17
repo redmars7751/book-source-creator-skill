@@ -84,7 +84,9 @@ Android Probe 不可用: No Android devices connected
 
 ## 登录态 / Cookie 验证
 
-v0.4.0 起，validator 支持临时导入 Cookie，用于验证需要登录态的书源。
+validator 支持导入和管理 Cookie，用于验证需要登录态或 CookieJar 的书源。
+
+**Cookie 持久化**：Cookie 自动保存到 `validator-cookies.json`，重启不丢失。也可通过环境变量 `COOKIE_STORE` 指定文件路径。
 
 浏览器界面：
 
@@ -101,6 +103,8 @@ cookies.json 格式：
 {
   "novalpie.cc": "auth_token=xxx; other=value"
 }
+
+Android Probe 渲染后，WebView 的 Set-Cookie 会自动回存到本地 CookieStore，后续 HTTP 请求自动携带。
 
 注意：
 
@@ -126,7 +130,7 @@ cookies.json 格式：
 
 - validator 已支持通过 Android Probe 调用真实 Android WebView 复核部分 webView:true / webJs 场景，但需要已连接的 Android 设备或模拟器。
 - Android Probe 通过只代表该设备 WebView 环境下通过，不等于阅读 App 100% 通过。
-- validator 已支持临时导入 Cookie，并按域名注入 HTTP 请求和 Android Probe WebView；Cookie 不会写入书源 JSON，也不应提交或分发。
+- validator Cookie 支持本地持久化（`validator-cookies.json`），重启不丢失；Android Probe 渲染后自动回存 Set-Cookie。
 - anonymous_candidate 不是可用通过，只表示匿名链路可作为候选，仍需登录态或 App/WebView 复核。
 - Cloudflare、验证码、付费墙、会员权限、DRM、强风控等访问控制只能标记需复核，不会也不应被绕过。
 - validator passed 只代表当前技术链路跑通，不代表质量通过、长期可用、合法可用或阅读体验完整。
