@@ -119,7 +119,7 @@ async function main() {
   const args = process.argv.slice(2);
   
   if (args.length < 2) {
-    console.error('用法: node validate-with-validator.mjs <source-json-file> <keyword> [http|browser|auto] [--output <dir>]');
+    console.error('用法: node validate-with-validator.mjs <source-json-file> <keyword> [http|browser|auto] [--output <dir>] [--cookie=<file>]');
     process.exit(1);
   }
   
@@ -129,6 +129,25 @@ async function main() {
   const modeIdx = args.findIndex(a => ['http', 'browser', 'auto'].includes(a));
   const mode = modeIdx >= 0 ? args[modeIdx] : 'http';
   const outputDir = outputIdx >= 0 ? args[outputIdx + 1] : null;
+  const cookieArg = args.find(a => a.startsWith('--cookie='));
+  const cookieFile = cookieArg ? cookieArg.split('=')[1] : null;
+  
+  // 加载 Cookie
+  if (cookieFile) {
+    try {
+      const cookies = JSON.parse(readFileSync(cookieFile, 'utf-8'));
+      for (const [domain, value] of Object.entries(cookies)) {
+        await fetch(`${VALIDATOR_URL}/api/cookie/set`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain, cookie: value })
+        });
+      }
+      console.error(`已加载 ${Object.keys(cookies).length} 个域的 Cookie`);
+    } catch (e) {
+      console.error(`Cookie 文件加载失败: ${e.message}`);
+    }
+  }
   
   // 检查 validator
   const running = await checkValidator();
