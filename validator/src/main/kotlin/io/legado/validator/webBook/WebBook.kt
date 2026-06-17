@@ -120,7 +120,10 @@ object WebBook {
             ruleData = book,
             chapter = bookChapter
         )
-        val res = analyzeUrl.getStrResponseAwait()
+        val res = analyzeUrl.getStrResponseAwait(
+            jsStr = contentRule.webJs,
+            sourceRegex = contentRule.sourceRegex
+        )
         lastResponse = res
         lastAnalyzeUrl = analyzeUrl
         BookContent.analyzeContent(

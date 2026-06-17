@@ -157,7 +157,13 @@ class AnalyzeUrl(
         }
     }
 
-    suspend fun getStrResponseAwait(): StrResponse = withContext(Dispatchers.IO) {
+    suspend fun getStrResponseAwait(
+        jsStr: String? = null,
+        sourceRegex: String? = null,
+    ): StrResponse = withContext(Dispatchers.IO) {
+        // jsStr and sourceRegex are accepted here to match Legado's signature.
+        // The actual WebView rendering path is handled by DebugService's
+        // android/browser mode when hasWebView is true.
         val headers = headerMap.toMutableMap()
         if (!headers.containsKey("User-Agent")) {
             headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -169,7 +175,10 @@ class AnalyzeUrl(
         }
     }
 
-    fun getStrResponse(): StrResponse {
+    fun getStrResponse(
+        jsStr: String? = null,
+        sourceRegex: String? = null,
+    ): StrResponse {
         val headers = headerMap.toMutableMap()
         if (!headers.containsKey("User-Agent")) {
             headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
