@@ -4,7 +4,7 @@
 
 ## 必须做
 
-- **POST 搜索正确语法**：`url,{"body":"key={{key}}","method":"POST"}`。不要在 URL 后写 `;post=key={{key}}`。
+- **POST 搜索正确语法**：`url,{"body":"key={{key}}","method":"POST"}`。`;post=` 简写语法在部分 Legado 版本中不工作，返回 404。
 - **详情页嵌目录**时 `tocUrl` 留空或指向详情页自身。不需要单独的 TOC API。
 - **加 User-Agent header**。纯 Java HTTP 客户端可能被 Cloudflare 拦截。
 

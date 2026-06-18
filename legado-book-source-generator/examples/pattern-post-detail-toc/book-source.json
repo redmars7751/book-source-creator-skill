@@ -2,7 +2,7 @@
   {
     "bookSourceUrl": "https://www.69shuba.com",
     "bookSourceName": "69书吧",
-    "searchUrl": "https://www.69shuba.com/modules/article/search.php;post=searchkey={{key}}",
+    "searchUrl": "https://www.69shuba.com/modules/article/search.php,{\"body\":\"searchkey={{key}}&searchtype=all\",\"method\":\"POST\"}",
     "ruleSearch": {
       "bookList": "div.newbox ul li",
       "name": "h3 a[href*='/book/']",
