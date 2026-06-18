@@ -1,6 +1,6 @@
 # 教训：API + WebView 正文 + 登录态站点
 
-来源：novalpie.cc（Android Probe 验证）、ciweimao.com（App 实测）——两个极难站点
+来源：黑盒实测（Android Probe + App 真机验证）
 
 ## 必须做
 
