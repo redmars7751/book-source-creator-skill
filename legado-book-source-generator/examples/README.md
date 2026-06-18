@@ -13,6 +13,8 @@
 - `json-api-site/`: JSON API（REST接口，JSONPath提取）
 - `webview-fallback-site/`: WebView回退（正文需WebView渲染）
 - `login-required-site/`: 需登录站点（loginUrl + enabledCookieJar）
+- `gbk-encoding-site/`: GBK编码站点（URL options 声明 charset）
+- `content-pagination-site/`: 正文分页站点（nextContentUrl 同章翻页）
 
 ## 使用规则
 
@@ -32,3 +34,5 @@
 | json-api-site | 模板 | 低 | REST接口，JSONPath提取 |
 | webview-fallback-site | 模板 | 中 | 正文需WebView，chapterUrl用##\$##拼接选项 |
 | login-required-site | 模板 | 中 | loginUrl + enabledCookieJar + header |
+| gbk-encoding-site | 模板 | 低 | URL options 声明 charset=gbk |
+| content-pagination-site | 模板 | 中 | nextContentUrl 同章翻页，正则区分同章/跳章 |
