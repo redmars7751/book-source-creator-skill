@@ -37,6 +37,26 @@ https://example.com,{"headers":{"User-Agent":"..."},"webView":true}
 
 **结论**：优先使用 JSONPath 模板（更简洁），`{"webView":true}` 可以直接放在 URL 模板末尾。validator/probe 会自动处理清洗。
 
+### `@css:` 规则中的 `@action` 链式限制
+
+**平台限制**（Legado 源码行为）：`@css:` 模式下，`getStringList` 使用 `lastIndexOf('@')` 取最后一个 `@` 作为 action 边界。这意味着：
+
+- ✅ `@css:selector@text` — 单 action，正常工作
+- ✅ `@css:selector@href` — 单 action，正常工作  
+- ❌ `@css:selector@href@js:...` — 多 action 链，**取最后一个 `@js:` 为 action，前面的 `@href` 被错误当成 CSS 选择器**，导致 Jsoup 解析失败（`SelectorParseException`）
+
+**绕行方案**：用 `##$##` 或 `<js>` 替代 `@js:` 链式 action：
+
+```text
+# 不兼容：
+@css:dt a@href@js:result.indexOf('http') === 0 ? result : 'https://example.com' + result
+
+# 兼容写法（非 @css: 模式，用 class/tag @ 链 + ##$##<js>）：
+class.item@tag.dt@tag.a@href##$##<js>result.indexOf('http') === 0 ? result : 'https://example.com' + result</js>
+```
+
+这是 Legado 源码本身的解析器限制，不是 validator 独有的 bug。
+
 ### result 变量在 JS 上下文中的差异
 
 在 `<js>` 块中，`result` 的类型取决于上下文：
