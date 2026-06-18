@@ -92,4 +92,4 @@ node "<skill-dir>/scripts/bsg.mjs" init <site-url> [--fast] [--cwd <输出目录
 4. `validate-with-validator.mjs <source> <keyword> android --output runs/<slug>/`
 6. Android Probe 不可用时：用 mode=http 验证，正文失败标 `validator_limitation`，不得标 passed
 
-设备配置详见 `docs/SETUP.md`。
+设备配置详见 `docs/SETUP.md`（含各品牌手机 USB 调试开启步骤）。用户不会设置时直接甩这个链接。

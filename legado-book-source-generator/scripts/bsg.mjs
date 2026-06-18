@@ -394,7 +394,7 @@ function completePhase(phase, state, runDir) {
           "  • 电脑通过 USB 数据线连接手机",
           "  • 电脑上有 adb（可运行 validator/setup-adb.bat 下载）",
           "",
-          "如果有，请现在连接手机并在手机上确认 USB 调试授权，然后回复「已连接」。",
+          "如果有，请现在连接手机并在手机上确认 USB 调试授权（各品牌设置方法见 docs/SETUP.md），然后回复「已连接」。",
           "如果没有 Android 设备，也可以继续——正文验证将标 needs_app_review，需在 Legado App 内手动测试。",
         ].join("\n"),
         blockingPhase: "assess",
