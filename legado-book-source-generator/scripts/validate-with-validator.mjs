@@ -126,7 +126,7 @@ async function main() {
   const sourceFile = args[0];
   const keyword = args[1];
   const outputIdx = args.indexOf('--output');
-  const modeIdx = args.findIndex(a => ['http', 'browser', 'android', 'auto'].includes(a));
+  const modeIdx = args.findIndex(a => ['http', 'browser', 'android'].includes(a));
   const mode = modeIdx >= 0 ? args[modeIdx] : 'http';
   const outputDir = outputIdx >= 0 ? args[outputIdx + 1] : null;
   const cookieArg = args.find(a => a.startsWith('--cookie='));

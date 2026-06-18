@@ -27,18 +27,18 @@ init → advance → advance → advance → advance → record-validation → a
 
 ## 快速路径
 
-`init` 加 `--fast`，仅当同时满足：
+先匿名 HTTP fetch 探测 4 条链路。确认全部满足后才在 `init` 加 `--fast`：
 
-1. 匿名 HTTP fetch 能拿到搜索/详情/目录/正文的可见文本（不是 CSR 空壳）
+1. 搜索/详情/目录/正文 HTTP 直接返回可见文本（不是 CSR 空壳）
 2. 无 Cloudflare / 验证码
 3. 无登录需求
 4. 无 `webView` / `webJs` / CSR 依赖
 
-不满足任一条件则走完整路径（Browser MCP + validator）。
+不满足任一条件则不加 `--fast`，走完整路径（Browser MCP）。
 
 ## 用户交互
 
-写完 `assessment.md` 后立即向用户展示评估摘要（3-6 行：评级 + 风险标签 + 关键发现）。
+写完 `assessment.md` 后立即向用户展示评估摘要。摘要必须 3-6 行，包含：评级、风险标签、4 条链路状态、关键阻塞点（如有）。
 
 `requiredUserAction` 非 null 时停下来等用户：
 
