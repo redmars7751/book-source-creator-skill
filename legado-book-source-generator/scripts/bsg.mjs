@@ -17,6 +17,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { spawn, execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { deriveSiteSlug } from "./lib/slug.mjs";
@@ -50,17 +51,36 @@ function formatDirList() {
   return SKILL_INSTALL_DIRS.join(", ");
 }
 
+function signState(state) {
+  const { _signature, ...clean } = state;
+  const json = JSON.stringify(clean, null, 2);
+  return crypto.createHash("sha256").update(json).digest("hex").slice(0, 16);
+}
+
 function loadRunState(runDir) {
   const p = path.join(runDir, "run-state.json");
   if (!fs.existsSync(p)) return null;
-  return JSON.parse(fs.readFileSync(p, "utf-8"));
+  const raw = fs.readFileSync(p, "utf-8");
+  const state = JSON.parse(raw);
+  if (state._signature) {
+    const expected = signState(state);
+    if (state._signature !== expected) {
+      // State was manually edited — reject
+      return { _tampered: true };
+    }
+  }
+  return state;
 }
 
 function saveRunState(runDir, state) {
   state.updatedAt = new Date().toISOString();
+  delete state._tampered;
+  const unsigned = { ...state };
+  delete unsigned._signature;
+  unsigned._signature = signState(unsigned);
   fs.writeFileSync(
     path.join(runDir, "run-state.json"),
-    JSON.stringify(state, null, 2),
+    JSON.stringify(unsigned, null, 2),
     "utf-8"
   );
 }
@@ -96,6 +116,15 @@ function freshRunState(siteUrl, siteSlug, mode, workingDir) {
 
 function fail(message) {
   return { ok: false, error: message };
+}
+
+function loadAndVerify(runDir) {
+  const state = loadRunState(runDir);
+  if (!state) return { state: null, error: `未找到 run-state.json: ${runDir}` };
+  if (state._tampered) {
+    return { state: null, error: "⛔ run-state.json 被手动编辑过。所有修改必须通过 bsg.mjs 命令。删除 runs/<slug>/ 重新 init。" };
+  }
+  return { state, error: null };
 }
 
 function fileExists(filePath) {
@@ -237,8 +266,8 @@ function cmdStatus(args) {
   const runDir = parseArg(args, "--run");
   if (!runDir) return fail("用法: node scripts/bsg.mjs status --run <run-dir>");
 
-  const state = loadRunState(runDir);
-  if (!state) return fail(`未找到 run-state.json: ${runDir}`);
+  const { state, error } = loadAndVerify(runDir);
+  if (error) return fail(error);
 
   const phases = Object.entries(state.phases).map(([name, p]) => ({
     phase: name,
@@ -285,8 +314,8 @@ function cmdAdvance(args) {
   const runDir = parseArg(args, "--run");
   if (!runDir) return fail("用法: node scripts/bsg.mjs advance --run <run-dir>");
 
-  const state = loadRunState(runDir);
-  if (!state) return fail(`未找到 run-state.json: ${runDir}`);
+  const { state, error } = loadAndVerify(runDir);
+  if (error) return fail(error);
 
   const idx = currentPhaseIndex(state);
   if (idx >= PHASE_ORDER.length) {
@@ -711,8 +740,8 @@ function cmdCheck(args) {
   const runDir = parseArg(args, "--run");
   if (!runDir) return fail("用法: node scripts/bsg.mjs check --run <run-dir>");
 
-  const state = loadRunState(runDir);
-  if (!state) return fail(`未找到 run-state.json: ${runDir}`);
+  const { state, error } = loadAndVerify(runDir);
+  if (error) return fail(error);
 
   const results = [];
 
@@ -851,8 +880,8 @@ function cmdSetLoginFeatures(args) {
   const runDir = parseArg(args, "--run");
   if (!runDir) return fail("用法: node scripts/bsg.mjs set-login-features --run <dir> [--flags <json>]");
 
-  const state = loadRunState(runDir);
-  if (!state) return fail(`未找到 run-state.json: ${runDir}`);
+  const { state, error } = loadAndVerify(runDir);
+  if (error) return fail(error);
 
   const flagsIdx = args.indexOf("--flags");
   if (flagsIdx >= 0) {
@@ -916,8 +945,8 @@ function cmdRecordValidation(args) {
     return fail(`无效状态: ${status}。可选值: ${validStatuses.join(", ")}`);
   }
 
-  const state = loadRunState(runDir);
-  if (!state) return fail(`未找到 run-state.json: ${runDir}`);
+  const { state, error } = loadAndVerify(runDir);
+  if (error) return fail(error);
 
   const v = state.phases.validate;
   v.attempts += 1;
@@ -1247,8 +1276,8 @@ function cmdDeliver(args) {
   const runDir = parseArg(args, "--run");
   if (!runDir) return fail("用法: node scripts/bsg.mjs deliver --run <run-dir>");
 
-  const state = loadRunState(runDir);
-  if (!state) return fail(`未找到 run-state.json: ${runDir}`);
+  const { state, error } = loadAndVerify(runDir);
+  if (error) return fail(error);
 
   return cmdDeliverCheck(state, runDir);
 }
