@@ -48,11 +48,11 @@ init → advance → advance → advance → advance → record-validation → a
 |------|------|
 | 评级"不建议生成" | 等用户决定 |
 | WebView/CSR 正文但无 Android 设备 | 请用户连接手机（设置指南：`docs/SETUP.md`） |
-| 需要登录凭据 | 用户完成登录后继续 |
+| 需要登录（enabledCookieJar/Authorization） | **adb 在线 → Probe 原生登录（/login + 手机完成）；无 adb → Browser MCP 登录 + Cookie 提取** |
 | Android Probe 需 adb 授权 | 用户在手机上确认 USB 调试 |
 | 同一错误连续 5 次（收敛失败） | 等用户决定 |
 
-登录凭据渠道: 手机扫码 / Token 输入 / Browser MCP Cookie 提取 → 详见 `references/policies.md`
+登录优先级：有 adb → Probe 原生登录（环境一致不掉验证）；无 adb → Browser MCP 登录 + Cookie 提取。详见 `references/policies.md`
 
 ## 原则
 
