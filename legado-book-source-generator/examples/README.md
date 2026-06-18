@@ -19,8 +19,10 @@
 
 ## 典型场景对照
 
-| 站点特征 | 参考样例 |
-|---------|---------|
-| 搜索/详情/目录用公开 JSON API，正文 CSR 需 WebView | `pattern-api-webview-auth/` |
-| 纯静态 HTML，CSS 选择器直提 | `pattern-css-pagination/` |
-| POST 搜索，详情页内嵌目录 | `pattern-post-detail-toc/` |
+| 站点特征 | 参考样例 | 踩坑记录 |
+|---------|---------|---------|
+| 搜索/详情/目录用 JSON API，正文 CSR WebView + 登录 | `pattern-api-webview-auth/` | NOTES.md |
+| 纯静态 HTML + CSS 选择器 + 分页 | `pattern-css-pagination/` | NOTES.md |
+| POST 搜索 + 详情页内嵌目录 | `pattern-post-detail-toc/` | NOTES.md |
+
+每个样例目录下的 `NOTES.md` 记录了真实生成过程中踩过的坑——生成前先读对应类型的 NOTES。

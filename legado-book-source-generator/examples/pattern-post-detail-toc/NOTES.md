@@ -1,0 +1,14 @@
+# 教训：POST 搜索站点
+
+来源：69shuba.com 实测
+
+## 必须做
+
+- **POST 搜索正确语法**：`url,{"body":"key={{key}}","method":"POST"}`。不要在 URL 后写 `;post=key={{key}}`。
+- **详情页嵌目录**时 `tocUrl` 留空或指向详情页自身。不需要单独的 TOC API。
+- **加 User-Agent header**。纯 Java HTTP 客户端可能被 Cloudflare 拦截。
+
+## 不要做
+
+- **WebView 不能绕过 Cloudflare Turnstile**。AI 经常误以为加 `webView:true` 就能过验证码——实际是两回事。Turnstile 是硬边界，标 `needs_app_review`。
+- **Browser MCP 里能看到 ≠ validator HTTP 能拿到**。前者走真实 Chrome，后者走 Java HTTP 客户端，反爬规则不同。
