@@ -1028,7 +1028,17 @@ function cmdRecordValidation(args) {
         state.loginFeatures.hasWebView = hasWV;
         state.loginFeatures.hasWebJs = !!hasWJ;
         const adbOk = checkAdb();
-        if (adbOk) {
+        // Check if Android mode was actually used (not HTTP fallback)
+        let androidWasUsed = false;
+        const reportPathForMode = path.join(runDir, "validator-report.json");
+        if (fileExists(reportPathForMode)) {
+          try {
+            const report = JSON.parse(fs.readFileSync(reportPathForMode, "utf-8"));
+            androidWasUsed = report.mode === "android";
+          } catch { /* ignore */ }
+        }
+
+        if (adbOk && !androidWasUsed) {
           // Device connected but AI didn't use it → BLOCK
           androidWarning = [
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
@@ -1067,17 +1077,25 @@ function cmdRecordValidation(args) {
     } catch { /* ignore */ }
   }
 
-  if (androidWarning && checkAdb()) {
-    // adb available but not used → BLOCK
-    v.attempts -= 1;
-    saveRunState(runDir, state);
-    return { ok: true, status: "blocked", blockedBy: "android_probe_not_used", shouldRetry: true, nextAction: "setup_android_probe_and_retry", message: androidWarning };
-  }
-  if (androidWarning && state.adbDetected) {
-    // Device was available at init but now disconnected → BLOCK, fixable
-    v.attempts -= 1;
-    saveRunState(runDir, state);
-    return { ok: true, status: "blocked", blockedBy: "android_device_disconnected", shouldRetry: true, nextAction: "reconnect_device_and_retry", message: androidWarning };
+  // Only block if android was NOT used (AI forgot). If android was used but failed, that's genuine.
+  if (androidWarning) {
+    const actuallyUsedAndroid = (() => {
+      const rp = path.join(runDir, "validator-report.json");
+      if (!fileExists(rp)) return false;
+      try { return JSON.parse(fs.readFileSync(rp, "utf-8")).mode === "android"; } catch { return false; }
+    })();
+    if (!actuallyUsedAndroid) {
+      if (checkAdb()) {
+        v.attempts -= 1;
+        saveRunState(runDir, state);
+        return { ok: true, status: "blocked", blockedBy: "android_probe_not_used", shouldRetry: true, nextAction: "setup_android_probe_and_retry", message: androidWarning };
+      }
+      if (state.adbDetected) {
+        v.attempts -= 1;
+        saveRunState(runDir, state);
+        return { ok: true, status: "blocked", blockedBy: "android_device_disconnected", shouldRetry: true, nextAction: "reconnect_device_and_retry", message: androidWarning };
+      }
+    }
   }
   // Never had device → warning only, allow continue
   if (androidWarning) {
