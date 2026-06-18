@@ -38,6 +38,8 @@ init → advance → advance → advance → advance → record-validation → a
 
 ## 用户交互
 
+**Probe 阶段遇到登录墙立即停止探测，询问用户是否登录。** 不要读 GitHub 源码、翻 manifest.json、研究 WebSocket 协议来绕过。登录是最快的路。
+
 写完 `assessment.md` 后立即向用户展示评估摘要。摘要必须 3-6 行，包含：评级、风险标签、4 条链路状态、关键阻塞点（如有）。
 
 `requiredUserAction` 非 null 时停下来等用户：
