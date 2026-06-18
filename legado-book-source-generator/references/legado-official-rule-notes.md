@@ -80,8 +80,8 @@ https://example.com,{"headers":{"User-Agent":"..."},"webView":true}
 
 - `chapterList` 首字符使用负号 `-` 可以反序
 - `chapterUrl` 直接决定正文入口
-- `nextTocUrl` 支持单个 URL
-- `nextTocUrl` 支持 URL 数组
+- `tocUrl` **只支持单个 URL**（不能像 `nextTocUrl` 那样用数组）
+- `nextTocUrl` 支持单个 URL 或 URL 数组
 - 若 JS 返回 `[]`、`null` 或 `""`，表示停止继续加载下一页
 
 这意味着：
@@ -89,6 +89,7 @@ https://example.com,{"headers":{"User-Agent":"..."},"webView":true}
 - 目录分页不一定要硬拼单个下一页
 - 当站点存在多分支目录链路时，可以显式返回数组
 - 停止条件必须明确，避免目录死循环
+- `tocUrl` 不能使用数组，多来源目录需在详情页预处理中合并
 
 ## 5. 正文规则重点
 
@@ -98,6 +99,13 @@ https://example.com,{"headers":{"User-Agent":"..."},"webView":true}
 
 - 正文图片链接可以附带请求头
 - 可通过拼接 `src + "," + JSON.stringify(options)` 的形式给图片单独带 header
+
+### `nextContentUrl`
+
+- 正文分页规则（同章内容跨多页）
+- 支持单个 URL 或 URL 数组
+- 返回 `[]`、`null` 或 `""` 表示没有下一页
+- **注意与目录跳章区分**：`nextContentUrl` 是同章翻页，目录 `chapterUrl` 是跳到下一章。两者混用会导致章节错乱
 
 ### `book` / `chapter` 对象
 
@@ -126,6 +134,32 @@ https://example.com,{"headers":{"User-Agent":"..."},"webView":true}
 
 - 当章节页直连不稳定，但页面最终在浏览器或 WebView 中能稳定渲染时，`WebView` 应被优先视为正式候选方案
 - 不要在还没评估 `WebView` 的情况下，直接跳到重型 JS 解密、签名复刻或 `不建议生成`
+
+**在规则表达式中附加 `,{"webView":true}` 的正确写法：**
+
+官方教程特别指出：不要在 CSS/XPath/JSONPath 规则表达式中直接拼接。正确写法是通过 `##$##` 或 `@js:` 在规则结果后追加：
+
+```text
+# 错误：
+tag.a@href,{\"webView\":true}
+
+# 正确写法1：用 ##$## 在结果后追加
+tag.a@href##$##,{\"webView\":true}
+
+# 正确写法2：用 @js: 拼接
+tag.a@href@js:result+',{\"webView\":true}'
+```
+
+在 `chapterUrl` 的 URL 模板中（如 `/book/{{$.novelId}}/{{$.id}},{\"webView\":true}`），直接放在模板末尾是合法的——因为这不是规则表达式，而是 URL 模板字符串。
+
+### `webJs` 返回值约束
+
+**官方硬约束：`webJs` 必须有返回值（不为空）。** 如果 `webJs` 返回空字符串，Legado 会进入无限重试循环直到超时。返回的字符串会被用作后续 `content` 规则处理的输入。
+
+这意味着：
+- `webJs` 中必须有明确的 `return` 或最后一行是表达式值
+- 必须确保目标 DOM 元素存在后再返回内容（加 `while` + `java.sleep` 重试循环）
+- 不能假设页面加载完成时内容就已经渲染好（CSR 页面需要额外等待）
 
 ## 6. 变量读写
 
